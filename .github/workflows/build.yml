@@ -38,15 +38,9 @@ jobs:
     - name: Check for hosted runners
       id: checker
       shell: bash
-      env:
-        IS_SELF_HOSTED_RUNNER: ${{ vars.IS_SELF_HOSTED_RUNNER || (github.repository_owner == 'utmapp' && 'true') }}
       run: |
         echo "github-runner='$RUNNER_IMAGE'" >> $GITHUB_OUTPUT
-        if [ "$IS_SELF_HOSTED_RUNNER" == "true" ]; then
-          echo "runners=['self-hosted', 'macOS']" >> $GITHUB_OUTPUT
-        else
-          echo "runners='$RUNNER_IMAGE'" >> $GITHUB_OUTPUT
-        fi
+        echo "runners='$RUNNER_IMAGE'" >> $GITHUB_OUTPUT
   build-sysroot:
     name: Build Sysroot
     runs-on: ${{ fromJSON(needs.configuration.outputs.runner) }}
@@ -80,7 +74,7 @@ jobs:
         run: |
           echo "/usr/local/opt/bison/bin:/opt/homebrew/opt/bison/bin" >> $GITHUB_PATH
       - name: Install Requirements
-        if: (steps.cache-sysroot.outputs.cache-matched-key == '' || github.event.inputs.rebuild_sysroot == 'true') && needs.configuration.outputs.runner == env.RUNNER_IMAGE
+        if: (steps.cache-sysroot.outputs.cache-matched-key == '' || github.event.inputs.rebuild_sysroot == 'true')
         run: |
           brew uninstall cmake
           brew install bison pkg-config gettext glib-utils libgpg-error nasm make meson cmake
