@@ -49,9 +49,6 @@ jobs:
       matrix:
         arch: [arm64]
         platform: [macos]
-        include:
-          - arch: x86_64
-            platform: macos
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -102,55 +99,4 @@ jobs:
         with:
           path: ./sysroot-${{ matrix.platform }}-${{ matrix.arch }}
           key: ${{ steps.cache-sysroot.outputs.cache-primary-key }}
-          upload-chunk-size: 1048576 # 1 MiB
-  build-sysroot-universal:
-    name: Build Sysroot (Universal Mac)
-    runs-on: ${{ fromJSON(needs.configuration.outputs.github-runner) }}
-    needs: [configuration, build-sysroot]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Check Cache (Universal Mac)
-        id: cache-sysroot-universal
-        uses: actions/cache/restore@v4
-        with:
-          path: ./sysroot-macOS-arm64_x86_64
-          key: macos-universal-${{ hashFiles('scripts/build_dependencies.sh', 'scripts/pack_dependencies.sh') }}-${{ hashFiles('patches/**') }}-${{ github.sha }}
-          restore-keys: macos-universal-${{ hashFiles('scripts/build_dependencies.sh', 'scripts/pack_dependencies.sh') }}-${{ hashFiles('patches/**') }}
-          lookup-only: github.event_name != 'release' && github.event.inputs.test_release != 'true'
-      - name: Cache Sysroot (arm64)
-        if: steps.cache-sysroot-universal.outputs.cache-matched-key == ''
-        id: cache-sysroot-arm64
-        uses: actions/cache/restore@v4
-        with:
-          path: ./sysroot-macos-arm64
-          key: macos-arm64-${{ hashFiles('scripts/build_dependencies.sh') }}-${{ hashFiles('patches/**') }}
-          fail-on-cache-miss: true
-      - name: Cache Sysroot (x86_64)
-        if: steps.cache-sysroot-universal.outputs.cache-matched-key == ''
-        id: cache-sysroot-x86_64
-        uses: actions/cache/restore@v4
-        with:
-          path: ./sysroot-macos-x86_64
-          key: macos-x86_64-${{ hashFiles('scripts/build_dependencies.sh') }}-${{ hashFiles('patches/**') }}
-          fail-on-cache-miss: true
-      - name: Pack Universal Sysroot
-        if: steps.cache-sysroot-universal.outputs.cache-matched-key == ''
-        run: |
-          ./scripts/pack_dependencies.sh . macos arm64 x86_64
-      - name: Compress Sysroot
-        if: steps.cache-sysroot-universal.outputs.cache-matched-key == '' || github.event_name == 'release' || github.event.inputs.test_release == 'true' || github.event.inputs.rebuild_sysroot == 'true'
-        run: tar -acf sysroot.tgz sysroot-macOS-arm64_x86_64
-      - name: Upload Sysroot
-        if: steps.cache-sysroot-universal.outputs.cache-matched-key == '' || github.event_name == 'release' || github.event.inputs.test_release == 'true' || github.event.inputs.rebuild_sysroot == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Sysroot-macos-universal
-          path: sysroot.tgz
-      - name: Save Cache (Universal Mac)
-        if: steps.cache-sysroot-universal.outputs.cache-matched-key == ''
-        uses: actions/cache/save@v4
-        with:
-          path: ./sysroot-macOS-arm64_x86_64
-          key: ${{ steps.cache-sysroot-universal.outputs.cache-primary-key }}
           upload-chunk-size: 1048576 # 1 MiB
